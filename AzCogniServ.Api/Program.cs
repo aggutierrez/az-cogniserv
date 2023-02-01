@@ -1,3 +1,4 @@
+using AzCogniServ.Api;
 using Hangfire;
 using Hangfire.SqlServer;
 using Serilog;
@@ -40,7 +41,7 @@ try
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
         .UseSerilogLogProvider()
-        .UseSqlServerStorage(builder.Configuration.GetConnectionString("Default"), new SqlServerStorageOptions
+        .UseSqlServerStorage(builder.Configuration.GetConnectionString("Hangfire"), new SqlServerStorageOptions
         {
             CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
             SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
@@ -59,10 +60,7 @@ try
         .UseHangfireDashboard()
         .UseEndpoints(endpoints => endpoints.MapHangfireDashboard());
 
-    using var scope = app.Services.CreateScope();
-    var backgroundJobsClient = scope.ServiceProvider.GetRequiredService<IBackgroundJobClient>();
-
-    backgroundJobsClient.Enqueue(() => Console.WriteLine("Hello world from Hangfire!"));
+    app.UseBackgroundJobs(jobs => jobs.WithSampleRecurringJob(app.Configuration));
 
     app.Run();
     return 0;
