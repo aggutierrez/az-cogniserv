@@ -2,5 +2,5 @@
 
 public interface IRecurringJob
 {
-    void Execute(IRecurringJobOptions? options = default);
+    Task Execute(IRecurringJobOptions? options = default, CancellationToken cancellationToken = default);
 }
