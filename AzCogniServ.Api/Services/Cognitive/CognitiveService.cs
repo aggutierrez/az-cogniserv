@@ -7,7 +7,7 @@ public sealed class CognitiveService : ICognitiveService
 {
     private const string CompvKey = "8c82a1d3adf84c5a984b854075f2a1d9";
     private const string CompvEndpoint = "https://kandu-comv.cognitiveservices.azure.com/";
-    private const double MinConfidenceTolerated = 0.70;
+    private const double MinConfidence = 0.0;
     
     public async Task<AnalysisResult> RecognizeFrom(Stream file, CancellationToken cancellationToken = default)
     {
@@ -24,14 +24,14 @@ public sealed class CognitiveService : ICognitiveService
 
         return new AnalysisResult(
             results.Tags
-                .Where(t => t.Confidence > MinConfidenceTolerated)
+                .Where(t => t.Confidence > MinConfidence)
                 .Select(t => t.Name),
             results.Categories
-                .Where(c => c.Score > MinConfidenceTolerated)
+                .Where(c => c.Score > MinConfidence)
                 .Select(c => c.Name),
             results.Description?
                 .Captions
-                .Where(c => c.Confidence > MinConfidenceTolerated)
+                .Where(c => c.Confidence > MinConfidence)
                 .MaxBy(c => c.Confidence)
                 ?.Text ?? string.Empty);
     }

@@ -5,7 +5,7 @@ namespace AzCogniServ.Api.Jobs.SampleRecurring;
 
 public sealed class SampleRecurringJob : IRecurringJob
 {
-    public const string Name = nameof(SampleRecurringJob);
+    public const string ConfigKey = nameof(SampleRecurringJob);
     
     private readonly IStorageService storageService;
     private readonly ICognitiveService cognitiveService;
@@ -22,16 +22,13 @@ public sealed class SampleRecurringJob : IRecurringJob
     {
         logger.LogInformation("Scanning for new files to recognize...");
 
-        var resources = await storageService.ListResourcesBy(StorageService.BlobContainerName, cancellationToken);
+        var resources = await storageService.ListResourcesBy(storageService.ContainerName, cancellationToken);
 
         await foreach (var resourceName in resources)
         {
             logger.LogDebug("Found resource with name [{Resource}]", resourceName);
-
-            var metadataFilename = $"{Path.GetFileNameWithoutExtension(resourceName)}.meta.json";
-            var metadataFile = await storageService.GetResourceBy(metadataFilename, cancellationToken);
-
-            if (metadataFile is not null)
+            
+            if (await storageService.ExistsMetadataFor(resourceName, cancellationToken))
             {
                 logger.LogDebug("File [{Resource}] skips analysis as there is already a metadata file", resourceName);
                 continue;

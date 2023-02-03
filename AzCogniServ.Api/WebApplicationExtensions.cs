@@ -19,10 +19,11 @@ public static class WebApplicationExtensions
     public static IServiceCollection AddStorage(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IStorageService, StorageService>()
+            .Configure<StorageServiceOptions>(configuration.GetSection(StorageServiceOptions.ConfigKey))
             .AddSingleton<ICognitiveService, CognitiveService>()
             .AddAzureClients(b =>
             {
-                b.AddBlobServiceClient(configuration.GetSection(SampleRecurringJob.Name));
+                b.AddBlobServiceClient(configuration.GetSection(StorageServiceOptions.ConfigKey));
                 b.ConfigureDefaults(configuration.GetSection("AzureDefaults"));
             });
 

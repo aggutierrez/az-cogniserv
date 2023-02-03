@@ -1,40 +1,39 @@
 ﻿using System.Text.Json;
-using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
+using Microsoft.Extensions.Options;
 
 namespace AzCogniServ.Api.Services.Storage;
 
 public sealed class StorageService : IStorageService
 {
-    public const string BlobContainerName = "activities";
-    
     private readonly BlobServiceClient serviceClient;
     private readonly ILogger<StorageService> logger;
+    private BlobContainerClient? client;
 
-    public StorageService(BlobServiceClient serviceClient, ILogger<StorageService> logger)
+    public string ContainerName { get; }
+
+    public StorageService(BlobServiceClient serviceClient, IOptions<StorageServiceOptions> options, ILogger<StorageService> logger)
     {
         this.serviceClient = serviceClient;
         this.logger = logger;
+        ContainerName = options.Value.ContainerName;
+    }
+
+    public async Task<bool> ExistsMetadataFor(string resourceName, CancellationToken cancellationToken = default)
+    {
+        var containerClient = await GetBlobContainerClient(cancellationToken);
+        
+        return await containerClient.GetBlockBlobClient(BuildMetadataResourceNameFrom(resourceName))
+            .ExistsAsync(cancellationToken);
     }
     
     public async Task<Stream?> GetResourceBy(string name, CancellationToken cancellationToken = default)
     {
         var containerClient = await GetBlobContainerClient(cancellationToken);
 
-        try
-        {
-            return await containerClient.GetBlockBlobClient(name)
-                .OpenReadAsync(cancellationToken: cancellationToken);
-        }
-        catch (RequestFailedException e)
-        {
-            if (e.Status == StatusCodes.Status404NotFound)
-                return null;
-            
-            logger.LogError(e, "Failed to download resource");
-            throw;
-        }
+        return await containerClient.GetBlockBlobClient(name)
+            .OpenReadAsync(cancellationToken: cancellationToken);
     }
 
     public async Task<AsyncResourceEnumerator> ListResourcesBy(string containerName, CancellationToken cancellationToken = default)
@@ -50,24 +49,30 @@ public sealed class StorageService : IStorageService
         var containerClient = await GetBlobContainerClient(cancellationToken);
 
         await containerClient.UploadBlobAsync(
-            $"{Path.GetFileNameWithoutExtension(resourceName)}.meta.json",
+            BuildMetadataResourceNameFrom(resourceName),
             BinaryData.FromString(JsonSerializer.Serialize(metadata)),
             cancellationToken);
     }
 
     private async Task<BlobContainerClient> GetBlobContainerClient(CancellationToken cancellationToken = default)
     {
-        var containerClient = serviceClient.GetBlobContainerClient(BlobContainerName);
+        if (client is not null)
+            return client;
+        
+        var containerClient = serviceClient.GetBlobContainerClient(ContainerName);
         
         // ReSharper disable once InvertIf
         if (!await containerClient.ExistsAsync(cancellationToken))
         {
-            const string message = $"Unable to find the container [{BlobContainerName}]";
+            var message = $"Unable to find the container [{ContainerName}]";
             
             logger.LogError(message);
             throw new InvalidOperationException(message);
         }
-        
+
+        client = containerClient;
         return containerClient;
     }
+
+    private static string BuildMetadataResourceNameFrom(string resourceName) => $"{Path.GetFileNameWithoutExtension(resourceName)}.meta.json";
 }

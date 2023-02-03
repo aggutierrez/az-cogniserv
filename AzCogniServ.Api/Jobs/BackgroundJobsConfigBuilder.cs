@@ -19,10 +19,10 @@ public sealed class BackgroundJobsConfigBuilder
     public BackgroundJobsConfigBuilder WithSampleRecurringJob(IConfiguration configuration)
     {
         var options = new SampleRecurringJobOptions(string.Empty);
-        var section = configuration.GetSection(SampleRecurringJob.Name);
+        var section = configuration.GetSection(SampleRecurringJob.ConfigKey);
         
         section.Bind(options);
-        recurringJobs.Add((SampleRecurringJob.Name, options.Schedule, typeof(SampleRecurringJob), null));
+        recurringJobs.Add((SampleRecurringJob.ConfigKey, options.Schedule, typeof(SampleRecurringJob), null));
         
         return this;
     }
