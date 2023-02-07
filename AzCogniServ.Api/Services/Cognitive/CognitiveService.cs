@@ -18,7 +18,8 @@ public sealed class CognitiveService : ICognitiveService
             {
                 VisualFeatureTypes.Tags,
                 VisualFeatureTypes.Categories,
-                VisualFeatureTypes.Description
+                VisualFeatureTypes.Description,
+                VisualFeatureTypes.Color
             },
             cancellationToken: cancellationToken);
 

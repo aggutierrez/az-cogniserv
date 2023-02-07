@@ -1,5 +1,5 @@
 ﻿using AzCogniServ.Api.Jobs;
-using AzCogniServ.Api.Jobs.SampleRecurring;
+using AzCogniServ.Api.Jobs.RecognizeImages;
 using AzCogniServ.Api.Services.Cognitive;
 using AzCogniServ.Api.Services.Storage;
 using Hangfire;
@@ -11,7 +11,7 @@ public static class WebApplicationExtensions
 {
     public static IServiceCollection AddBackgroundJobs(this IServiceCollection services)
     {
-        services.AddScoped<SampleRecurringJob>();
+        services.AddScoped<RecognizeImagesJob>();
 
         return services;
     }

@@ -1,17 +1,17 @@
 ﻿using AzCogniServ.Api.Services.Cognitive;
 using AzCogniServ.Api.Services.Storage;
 
-namespace AzCogniServ.Api.Jobs.SampleRecurring;
+namespace AzCogniServ.Api.Jobs.RecognizeImages;
 
-public sealed class SampleRecurringJob : IRecurringJob
+public sealed class RecognizeImagesJob : IRecurringJob
 {
-    public const string ConfigKey = nameof(SampleRecurringJob);
+    public const string ConfigKey = "RecognizeImages";
     
     private readonly IStorageService storageService;
     private readonly ICognitiveService cognitiveService;
-    private readonly ILogger<SampleRecurringJob> logger;
+    private readonly ILogger<RecognizeImagesJob> logger;
 
-    public SampleRecurringJob(IStorageService storageService, ICognitiveService cognitiveService, ILogger<SampleRecurringJob> logger)
+    public RecognizeImagesJob(IStorageService storageService, ICognitiveService cognitiveService, ILogger<RecognizeImagesJob> logger)
     {
         this.storageService = storageService;
         this.cognitiveService = cognitiveService;
@@ -34,7 +34,7 @@ public sealed class SampleRecurringJob : IRecurringJob
                 continue;
             }
 
-            var file = await storageService.GetResourceBy(resourceName, cancellationToken);
+            await using var file = await storageService.GetResourceBy(resourceName, cancellationToken);
             var result = await cognitiveService.RecognizeFrom(file!, cancellationToken);
             
             logger.LogDebug("File [{Resource}]: {Tags} / {Categories} / {Description}",

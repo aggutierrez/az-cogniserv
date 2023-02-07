@@ -1,4 +1,4 @@
-﻿using AzCogniServ.Api.Jobs.SampleRecurring;
+﻿using AzCogniServ.Api.Jobs.RecognizeImages;
 using Hangfire;
 using Hangfire.Common;
 
@@ -16,13 +16,13 @@ public sealed class BackgroundJobsConfigBuilder
 
     public static BackgroundJobsConfigBuilder AttachedTo(IServiceProvider services) => new(services);
 
-    public BackgroundJobsConfigBuilder WithSampleRecurringJob(IConfiguration configuration)
+    public BackgroundJobsConfigBuilder WithRecognizeImagesJob(IConfiguration configuration)
     {
-        var options = new SampleRecurringJobOptions(string.Empty);
-        var section = configuration.GetSection(SampleRecurringJob.ConfigKey);
+        var options = new RecognizeImagesJobOptions(string.Empty);
+        var section = configuration.GetSection(RecognizeImagesJob.ConfigKey);
         
         section.Bind(options);
-        recurringJobs.Add((SampleRecurringJob.ConfigKey, options.Schedule, typeof(SampleRecurringJob), null));
+        recurringJobs.Add((RecognizeImagesJob.ConfigKey, options.Schedule, typeof(RecognizeImagesJob), null));
         
         return this;
     }
