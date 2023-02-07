@@ -9,7 +9,7 @@ public sealed class CognitiveService : ICognitiveService
     private const string CompvEndpoint = "https://kandu-comv.cognitiveservices.azure.com/";
     private const double MinConfidence = 0.0;
     
-    public async Task<AnalysisResult> RecognizeFrom(Stream file, CancellationToken cancellationToken = default)
+    public async Task<ImageAnalysisResult> RecognizeFrom(Stream file, CancellationToken cancellationToken = default)
     {
         using var client = new ComputerVisionClient(new ApiKeyServiceClientCredentials(CompvKey)) { Endpoint = CompvEndpoint };
         var results = await client.AnalyzeImageInStreamAsync(
@@ -23,7 +23,7 @@ public sealed class CognitiveService : ICognitiveService
             },
             cancellationToken: cancellationToken);
 
-        return new AnalysisResult(
+        return new ImageAnalysisResult(
             results.Tags
                 .Where(t => t.Confidence > MinConfidence)
                 .Select(t => t.Name),

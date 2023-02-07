@@ -2,5 +2,5 @@
 
 public interface ICognitiveService
 {
-    Task<AnalysisResult> RecognizeFrom(Stream file, CancellationToken cancellationToken = default);
+    Task<ImageAnalysisResult> RecognizeFrom(Stream file, CancellationToken cancellationToken = default);
 }
