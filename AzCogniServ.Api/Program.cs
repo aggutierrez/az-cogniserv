@@ -64,7 +64,9 @@ try
         .UseHangfireDashboard()
         .UseEndpoints(endpoints => endpoints.MapHangfireDashboard());
 
-    app.UseBackgroundJobs(jobs => jobs.WithRecognizeImagesJob(app.Configuration));
+    app.UseBackgroundJobs(jobs =>
+        jobs.WithRecognizeImagesJob(app.Configuration)
+            .WithRecognizeVideosJob(app.Configuration));
 
     app.Run();
     return 0;

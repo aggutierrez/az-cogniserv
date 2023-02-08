@@ -1,7 +1,9 @@
 ﻿using AzCogniServ.Api.Jobs;
 using AzCogniServ.Api.Jobs.RecognizeImages;
+using AzCogniServ.Api.Jobs.RecognizeVideos;
 using AzCogniServ.Api.Services.Cognitive;
 using AzCogniServ.Api.Services.Storage;
+using AzCogniServ.Api.Services.VideoIndexer;
 using Hangfire;
 using Microsoft.Extensions.Azure;
 
@@ -11,7 +13,8 @@ public static class WebApplicationExtensions
 {
     public static IServiceCollection AddBackgroundJobs(this IServiceCollection services)
     {
-        services.AddScoped<RecognizeImagesJob>();
+        services.AddScoped<RecognizeImagesJob>()
+            .AddScoped<RecognizeVideosJob>();
 
         return services;
     }
@@ -21,6 +24,7 @@ public static class WebApplicationExtensions
         services.AddSingleton<IStorageService, StorageService>()
             .Configure<StorageServiceOptions>(configuration.GetSection(StorageServiceOptions.ConfigKey))
             .AddSingleton<ICognitiveService, CognitiveService>()
+            .AddSingleton<IVideoIndexerService, VideoIndexerService>()
             .AddAzureClients(b =>
             {
                 b.AddBlobServiceClient(configuration.GetSection(StorageServiceOptions.ConfigKey));

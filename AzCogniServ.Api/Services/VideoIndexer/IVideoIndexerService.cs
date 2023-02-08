@@ -2,6 +2,6 @@
 
 public interface IVideoIndexerService
 {
-    Task<VideoAnalysisResult> RecognizeFrom(Stream file, string subscriptionId, string resourceGroup, string accountName,
-        CancellationToken cancellationToken = default);
+    Task<string> RecognizeFrom(Stream file, string videoName, ArmAccountDescriptor accountDescriptor,
+        ILogger<VideoIndexerResourceProviderClient> logger, string? videoDescription = null, CancellationToken cancellationToken = default);
 }

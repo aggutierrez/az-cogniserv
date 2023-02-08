@@ -15,41 +15,35 @@ public sealed class VideoIndexerResourceProviderClient
     private const string AzureResourceManagerHostname = "https://management.azure.com";
     private const string ApiHostname = "https://api.videoindexer.ai";
     private const string ApiVersion = "2022-08-01";
+    private const string DefaultLang = "en-US";
     
     private readonly string accessToken;
     private readonly string subscriptionId;
     private readonly string resourceGroup;
     private readonly string accountName;
+    private readonly ILogger<VideoIndexerResourceProviderClient> logger;
 
     private ArmAccount? account;
     private string? accountAccessToken;
 
-    public VideoIndexerResourceProviderClient(string accessToken, string subscriptionId, string resourceGroup, string accountName)
+    public VideoIndexerResourceProviderClient(string accessToken, string subscriptionId, string resourceGroup, string accountName,
+        ILogger<VideoIndexerResourceProviderClient> logger)
     {
         this.accessToken = accessToken;
         this.subscriptionId = subscriptionId;
         this.resourceGroup = resourceGroup;
         this.accountName = accountName;
+        this.logger = logger;
     }
 
     private static TokenRequestContext DefaultContext { get; } = new(new[] { $"{AzureResourceManagerHostname}/.default" });
 
-    public static async Task<VideoIndexerResourceProviderClient> Of(string subscriptionId, string resourceGroup, string accountName)
+    public static async Task<VideoIndexerResourceProviderClient> Of(string subscriptionId, string resourceGroup, string accountName,
+        ILogger<VideoIndexerResourceProviderClient> logger)
     {
         var tokenRequestResult = await new DefaultAzureCredential().GetTokenAsync(DefaultContext);
         
-        return new VideoIndexerResourceProviderClient(tokenRequestResult.Token, subscriptionId, resourceGroup, accountName);
-    }
-
-    public async Task<string> GetAccountAccessToken(CancellationToken cancellationToken = default)
-    {
-        var request = new ArmAccessTokenRequest
-        {
-            PermissionType = "Contributor",
-            Scope = ArmAccessTokenScope.Account
-        };
-
-        return await RequestAccessToken(request, cancellationToken);
+        return new VideoIndexerResourceProviderClient(tokenRequestResult.Token, subscriptionId, resourceGroup, accountName, logger);
     }
     
     public async Task<string> GetVideoAccessToken(string videoId, CancellationToken cancellationToken = default)
@@ -64,27 +58,38 @@ public sealed class VideoIndexerResourceProviderClient
         return await RequestAccessToken(request, cancellationToken);
     }
 
-    public async Task<string> UploadVideoFrom(Stream fileStream, CancellationToken cancellationToken = default)
+    /*
+     * Supported media formats at: https://learn.microsoft.com/en-us/azure/media-services/latest/encode-media-encoder-standard-formats-reference
+     */
+    public async Task<string> UploadVideoFrom(Stream fileStream, string name, string description,
+        bool isTrialAccount = false, CancellationToken cancellationToken = default)
     {
         await InitializeAccountAccessTokenIfNeeded(cancellationToken);
+        await InitializeAccountDetailsIfNeeded(cancellationToken);
+        
         var queryParams = QueryString.Create(
                 new Dictionary<string, string>
                 {
-                    {"accessToken", accountAccessToken!},
-                    {"name", "video sample"},
-                    {"description", "video_description"},
-                    {"privacy", "private"},
-                    {"partition", "partition"}
-                }!)
-            .ToString();
+                    {"name", Path.GetFileNameWithoutExtension(name)},
+                    {"description", description},
+                    {"fileName", name},
+                    {"privacy", "Private"},
+                    {"language", DefaultLang},
+                    {"accessToken", accountAccessToken!}
+                }!);
         var content = new MultipartFormDataContent();
-
-        content.Add(new StreamContent(fileStream));
-        await InitializeAccountDetailsIfNeeded(cancellationToken);
+        var streamContent = new StreamContent(fileStream);
         
+        content.Add(streamContent, "file", name);
+        streamContent.Headers.ContentDisposition!.FileNameStar = "";
+
         using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
+        
+        httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", subscriptionId);
+        httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+        
         var response = await httpClient.PostAsync(
-            $"{ApiHostname}/{account!.Location}/Accounts/{account.Properties.Id}/Videos?{queryParams}",
+            $"{ApiHostname}/{(isTrialAccount ? "trial" : account!.Location)}/Accounts/{account!.Properties.Id}/Videos{queryParams}",
             content,
             cancellationToken);
         
@@ -97,9 +102,11 @@ public sealed class VideoIndexerResourceProviderClient
         return videoId;
     }
 
-    public async Task WaitForCompletionOf(string videoId, CancellationToken cancellationToken = default)
+    public async Task WaitForCompletionOf(string videoId, bool isTrialAccount = false, CancellationToken cancellationToken = default)
     {
         await InitializeAccountAccessTokenIfNeeded(cancellationToken);
+        await InitializeAccountDetailsIfNeeded(cancellationToken);
+        
         var isAnalysisComplete = false;
         
         while (!isAnalysisComplete)
@@ -107,14 +114,17 @@ public sealed class VideoIndexerResourceProviderClient
             var queryParams = QueryString.Create(
                     new Dictionary<string, string>
                     {
-                        {"accessToken", accountAccessToken},
-                        {"language", "English"},
-                    })
-                .ToString();
+                        {"accessToken", accountAccessToken!},
+                        {"language", DefaultLang},
+                    }!);
 
             using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
+            
+            httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", subscriptionId);
+            httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+            
             var response = await httpClient.GetAsync(
-                $"{ApiHostname}/{account.Location}/Accounts/{account.Properties.Id}/Videos/{videoId}/Index?{queryParams}",
+                $"{ApiHostname}/{(isTrialAccount ? "trial" : account!.Location)}/Accounts/{account!.Properties.Id}/Videos/{videoId}/Index{queryParams}",
                 cancellationToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
@@ -128,6 +138,8 @@ public sealed class VideoIndexerResourceProviderClient
                 continue;
             }
 
+            logger.LogDebug("Waiting for video [{VideoId}]", videoId);
+            
             if (processingState == ArmProcessingState.Failed.ToString())
                 throw new Exception($"Something went wrong: {await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken)}");
 
@@ -148,8 +160,12 @@ public sealed class VideoIndexerResourceProviderClient
         await InitializeAccountDetailsIfNeeded(cancellationToken);
         
         using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
+        
+        httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", subscriptionId);
+        httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+        
         var response = await httpClient.GetAsync(
-            $"{ApiHostname}/{account!.Location}/Accounts/{account.Properties.Id}/Videos/Search?{queryParams}",
+            $"{ApiHostname}/{account!.Location}/Accounts/{account.Properties.Id}/Videos/Search{queryParams}",
             cancellationToken);
         
         if (response.StatusCode != HttpStatusCode.OK)
@@ -168,12 +184,13 @@ public sealed class VideoIndexerResourceProviderClient
 
         var response = await client.PostAsync(
             $"{AzureResourceManagerHostname}/subscriptions/{subscriptionId}/resourcegroups/{resourceGroup}/providers/Microsoft.VideoIndexer/accounts/{accountName}/generateAccessToken?api-version={ApiVersion}",
-            httpContent);
+            httpContent,
+            cancellationToken);
 
         if (response.StatusCode != HttpStatusCode.OK)
             throw new Exception($"Request failed with code [{response.StatusCode}] and reason: {response.ReasonPhrase}");
         
-        var jsonResponseBody = await response.Content.ReadAsStringAsync();
+        var jsonResponseBody = await response.Content.ReadAsStringAsync(cancellationToken);
         
         return JsonSerializer.Deserialize<ArmAccessTokenResponse>(jsonResponseBody)?.AccessToken
             ?? throw new Exception("No access token was returned");
@@ -205,6 +222,12 @@ public sealed class VideoIndexerResourceProviderClient
         if (accountAccessToken is not null)
             return;
 
-        accountAccessToken = await GetAccountAccessToken(cancellationToken);
+        var request = new ArmAccessTokenRequest
+        {
+            PermissionType = "Contributor",
+            Scope = ArmAccessTokenScope.Account
+        };
+
+        accountAccessToken = await RequestAccessToken(request, cancellationToken);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using AzCogniServ.Api.Services.Cognitive;
 using AzCogniServ.Api.Services.Storage;
+using Hangfire;
 
 namespace AzCogniServ.Api.Jobs.RecognizeImages;
 
@@ -18,32 +19,34 @@ public sealed class RecognizeImagesJob : IRecurringJob
         this.logger = logger;
     }
     
+    [AutomaticRetry(Attempts = 0)]
     public async Task Execute(IRecurringJobOptions? options = default, CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("Scanning for new files to recognize...");
+        logger.LogInformation("Scanning for new images to recognize...");
 
-        var resources = await storageService.ListResourcesBy(storageService.ContainerName, cancellationToken);
+        var images = (await storageService.ListResourcesBy(storageService.ContainerName, cancellationToken))
+            .WithFileExtensions(".png", ".jpg", ".gif", ".webp", ".bmp");
 
-        await foreach (var resourceName in resources)
+        await foreach (var image in images)
         {
-            logger.LogDebug("Found resource with name [{Resource}]", resourceName);
+            logger.LogDebug("Found image with name [{Image}]", image);
             
-            if (await storageService.ExistsMetadataFor(resourceName, cancellationToken))
+            if (await storageService.ExistsMetadataFor(image, cancellationToken))
             {
-                logger.LogDebug("File [{Resource}] skips analysis as there is already a metadata file", resourceName);
+                logger.LogDebug("File [{Image}] skips analysis as there is already a metadata file", image);
                 continue;
             }
 
-            await using var file = await storageService.GetResourceBy(resourceName, cancellationToken);
+            await using var file = await storageService.GetResourceBy(image, cancellationToken);
             var result = await cognitiveService.RecognizeFrom(file!, cancellationToken);
             
             logger.LogDebug("File [{Resource}]: {Tags} / {Categories} / {Description}",
-                resourceName,
+                image,
                 string.Join(',', result.Tags),
                 string.Join(',', result.Categories),
                 result.Description);
 
-            await storageService.SaveResourceMetadataBy(resourceName, result, cancellationToken);
+            await storageService.SaveResourceMetadataBy(image, result, cancellationToken);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using AzCogniServ.Api.Jobs.RecognizeImages;
+using AzCogniServ.Api.Jobs.RecognizeVideos;
 using Hangfire;
 using Hangfire.Common;
 
@@ -23,6 +24,17 @@ public sealed class BackgroundJobsConfigBuilder
         
         section.Bind(options);
         recurringJobs.Add((RecognizeImagesJob.ConfigKey, options.Schedule, typeof(RecognizeImagesJob), null));
+        
+        return this;
+    }
+    
+    public BackgroundJobsConfigBuilder WithRecognizeVideosJob(IConfiguration configuration)
+    {
+        var options = new RecognizeVideosJobOptions(string.Empty, string.Empty, string.Empty, string.Empty, false);
+        var section = configuration.GetSection(RecognizeVideosJobOptions.ConfigKey);
+        
+        section.Bind(options);
+        recurringJobs.Add((RecognizeVideosJobOptions.ConfigKey, options.Schedule, typeof(RecognizeVideosJob), options));
         
         return this;
     }

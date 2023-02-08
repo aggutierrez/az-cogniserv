@@ -6,10 +6,17 @@ namespace AzCogniServ.Api.Services.Storage;
 public sealed class AsyncResourceEnumerator : IAsyncEnumerable<string>
 {
     private readonly AsyncPageable<BlobItem> items;
+    private string[]? fileExtensions;
 
     public AsyncResourceEnumerator(AsyncPageable<BlobItem> items)
     {
         this.items = items;
+    }
+
+    public AsyncResourceEnumerator WithFileExtensions(params string[] extensions)
+    {
+        fileExtensions = extensions;
+        return this;
     }
 
     public async IAsyncEnumerator<string> GetAsyncEnumerator(CancellationToken cancellationToken = new())
@@ -18,7 +25,8 @@ public sealed class AsyncResourceEnumerator : IAsyncEnumerable<string>
         {
             foreach (var value in page.Values)
             {
-                if (!Path.GetFileNameWithoutExtension(value.Name).EndsWith(".meta"))
+                if (!Path.GetFileNameWithoutExtension(value.Name).EndsWith(".meta") &&
+                    (fileExtensions?.Contains(Path.GetExtension(value.Name)) ?? true))
                     yield return value.Name;
             }
         }
