@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzCogniServ.Api", "AzCogniS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzCogniServ.Cli", "AzCogniServ.Cli\AzCogniServ.Cli.csproj", "{4186DAF5-6387-46DD-9BEA-46268864B338}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzCogniServ.SpeechToText", "AzCogniServ.SpeechToText\AzCogniServ.SpeechToText.csproj", "{975D8DA4-D235-412F-96E8-CB64382C0260}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{4186DAF5-6387-46DD-9BEA-46268864B338}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4186DAF5-6387-46DD-9BEA-46268864B338}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4186DAF5-6387-46DD-9BEA-46268864B338}.Release|Any CPU.Build.0 = Release|Any CPU
+		{975D8DA4-D235-412F-96E8-CB64382C0260}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{975D8DA4-D235-412F-96E8-CB64382C0260}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{975D8DA4-D235-412F-96E8-CB64382C0260}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{975D8DA4-D235-412F-96E8-CB64382C0260}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -4,6 +4,10 @@ using Hangfire;
 
 namespace AzCogniServ.Api.Jobs.RecognizeVideos;
 
+/*
+ * Adapted from the samples from the Github repo: https://github.com/Azure-Samples/media-services-video-indexer.git
+ * With the help of the API explorer at: https://api-portal.videoindexer.ai/api-details#api=Operations
+ */
 public class RecognizeVideosJob : IRecurringJob
 {
     private readonly IStorageService storageService;
